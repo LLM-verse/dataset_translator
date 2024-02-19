@@ -1,6 +1,71 @@
 import re
 from typing import Tuple, Union, List
 
+# Organize code elements into different categories
+CODE_ELEMENTS = {
+    'keywords': {
+        'c': ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum',
+              'extern', 'float', 'for', 'goto', 'if', 'inline', 'int', 'long', 'register', 'restrict', 'return',
+              'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void',
+              'volatile', 'while'],
+        'csharp': ['abstract', 'as', 'base', 'bool', 'break', 'byte', 'case', 'catch', 'char', 'checked', 'class',
+                   'const', 'continue', 'decimal', 'default', 'delegate', 'do', 'double', 'else', 'enum', 'event',
+                   'explicit', 'extern', 'false', 'finally', 'fixed', 'float', 'for', 'foreach', 'goto', 'if',
+                   'implicit', 'in', 'int', 'interface', 'internal', 'is', 'lock', 'long', 'namespace', 'new',
+                   'null', 'object', 'operator', 'out', 'override', 'params', 'private', 'protected', 'public',
+                   'readonly', 'ref', 'return', 'sbyte', 'sealed', 'short', 'sizeof', 'stackalloc', 'static',
+                   'string', 'struct', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'uint', 'ulong',
+                   'unchecked', 'unsafe', 'ushort', 'using', 'virtual', 'void', 'volatile', 'while', 'yield'],
+        'python': ['and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif',
+                   'else', 'except', 'False', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is',
+                   'lambda', 'None', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while',
+                   'with', 'yield'],
+    },
+    'operators': {
+        'c': ['+', '-', '*', '/', '%', '++', '--', '==', '!=', '>', '>=', '<', '<=', '&&', '||', '!', '&', '|', '^',
+              '~', '<<', '>>', '?', ':', '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', 'sizeof',
+              '->', '=>'],
+        'csharp': ['+', '-', '*', '/', '%', '++', '--', '==', '!=', '>', '>=', '<', '<=', '&&', '||', '!', '&', '|',
+                   '^', '~', '<<', '>>', '?', ':', '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=',
+                   '=>', '->', '??', '??='],
+        'python': ['+', '-', '*', '/', '%', '**', '//', '==', '!=', '<', '<=', '>', '>=', 'and', 'or', 'not', 'in',
+                   'is', '+=', '-=', '*=', '/=', '%=', '**=', '//=', '=', '==', '!=', '<>', '<', '<=', '>', '>='],
+    },
+    'constants': {
+        'c': ['NULL', 'nil'],
+        'csharp': ['null'],
+        'python': ['None'],
+    },
+    'builtin_functions': {
+        'c': ['printf'],
+        'csharp': ['Console.WriteLine'],
+        'python': ['print'],
+    },
+    'comments': {
+        'c': ['//', '/*', '*/'],
+        'csharp': ['//', '/*', '*/'],
+        'python': ['#'],
+    },
+    'data_types': {
+        'c': ['int', 'char', 'float', 'double', 'long', 'short', 'void', 'bool'],
+        'csharp': ['int', 'char', 'float', 'double', 'long', 'short', 'void', 'bool', 'string', 'decimal'],
+        'python': ['int', 'float', 'str', 'bool', 'complex'],
+    },
+    'control_flow': {
+        'c': ['if', 'else', 'else if', 'switch', 'case', 'break', 'default', 'return', 'continue', 'while', 'do',
+              'for', 'goto'],
+        'csharp': ['if', 'else', 'else if', 'switch', 'case', 'break', 'default', 'return', 'continue', 'while',
+                   'do', 'for', 'goto'],
+        'python': ['if', 'elif', 'else', 'while', 'for', 'break', 'continue', 'return', 'try', 'except', 'finally',
+                   'with', 'pass'],
+    },
+}
+
+# Extract all elements from the dictionary
+ALL_ELEMENTS = set()
+for category in CODE_ELEMENTS.values():
+    for elements in category.values():
+        ALL_ELEMENTS.update(elements)
 
 def code_likelihood_score(text: str) -> Tuple[int, list]:
     # Calculate a score based on code-like elements
