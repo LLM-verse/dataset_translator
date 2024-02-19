@@ -18,7 +18,7 @@ class TranslateModule:
         
         self.data = None
 
-        self.data = None
+        self.translate_data = None
 
         self.all_fields = None
         self.target_fields = None
@@ -74,9 +74,9 @@ class TranslateModule:
             max_list_length_per_thread = max_list_length_per_thread,
             translator = self.provider,)
         thread.translate_converted(converted_data = self.data)
-        self.data = thread.converted_data_translated
+        self.translate_data = thread.converted_data_translated
 
-        print(f"Total data translated: {len(self.data)}")
+        print(f"Total data translated: {len(self.translate_data)}")
 
         self.post_translate_validate()
 
@@ -105,7 +105,7 @@ class TranslateModule:
     def post_translate_validate(self) -> None:
         post_validated_translate_data = []
         # Note: This validates will override the original self.converted_data_translated
-        for idx, example in enumerate(tqdm(self.data, desc="Validating data after translation:")):
+        for idx, example in enumerate(tqdm(self.translate_data, desc="Validating data after translation:")):
             for key in self.target_fields:
                 if have_re_code(example[key], code=self.fail_translation_code):
                     self.err_idx2.append(example["qas_id"])
@@ -114,8 +114,8 @@ class TranslateModule:
                     post_validated_translate_data.append(example)
 
         print(f"\nTotal data left after filtering fail translation: {len(post_validated_translate_data)}\n")
-        self.data = post_validated_translate_data
+        self.translate_data = post_validated_translate_data
 
     def get_hf_data(self):
-        return Dataset.from_list(self.data)
+        return Dataset.from_list(self.translate_data)
         
