@@ -23,8 +23,7 @@ from tqdm.auto import tqdm
 
 from concurrent.futures import ThreadPoolExecutor
 
-from providers import Provider, GoogleProvider, MultipleProviders
-from configs import BaseConfig, QAConfig, DialogsConfig
+from .providers import Provider, GoogleProvider
 from .utils import force_super_call, ForceBaseCallMeta, timeit, have_internet
 from .filters import have_code, have_re_code
 
