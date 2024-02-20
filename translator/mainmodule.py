@@ -24,30 +24,31 @@ class TranslateModule:
         self.code_idx = []
         self.fail_idx = []
 
-    def read(self, dataset_split):
+    # def read(self, dataset_split):
         
-        self.reset()
+    #     self.reset()
 
-        all_fields = dataset_split.column_names
+    #     all_fields = dataset_split.column_names
 
-        data_converted = []
-        qas_id = 0
-        for data in tqdm(dataset_split, desc=f"Reading data"):
-            data_dict = {}
+    #     data_converted = []
+    #     qas_id = 0
+    #     for data in tqdm(dataset_split, desc=f"Reading data"):
+    #         data_dict = {}
 
-            for f in all_fields:
-                data_dict[f] = data[f]
+    #         for f in all_fields:
+    #             data_dict[f] = data[f]
 
-            data_dict["qas_id"] = qas_id
-            qas_id += 1
-            data_converted.append(data_dict)
+    #         data_dict["qas_id"] = qas_id
+    #         qas_id += 1
+    #         data_converted.append(data_dict)
 
-        print(f"Total data read: {len(data)}")
-        print(f"Fields: {all_fields}")
-        return data_converted, all_fields
+    #     print(f"Total data read: {len(data)}")
+    #     print(f"Fields: {all_fields}")
+    #     return data_converted, all_fields
 
     def convert(self,
-        dataset_split,
+        data,
+        all_fields,        
         target_fields: List[str],
         source_lang: str = "en",
         target_lang: str = "te",
@@ -57,7 +58,8 @@ class TranslateModule:
         large_chunks_threshold = 20_000,
         max_list_length_per_thread = 3,):
 
-        data, all_fields = self.read(dataset_split)
+        # data, all_fields = self.read(dataset_split)
+        self.reset()
         target_fields = target_fields
 
         data = self.pre_translate_validate(data, target_fields, do_not_translate_code)
@@ -79,7 +81,7 @@ class TranslateModule:
         print(f"Total data translated: {len(data)}")
 
         data = self.post_translate_validate(data, target_fields)
-        return get_hf_data(data)
+        return data
 
 
     @timeit
