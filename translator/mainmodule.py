@@ -16,50 +16,38 @@ class TranslateModule:
     def __init__(self, provider = GoogleProvider):
         self.provider = provider
         
-        self.data = None
-
-        self.translate_data = None
-
-        self.all_fields = None
-        self.target_fields = None
-        self.do_not_translate_code = False # If True, will not translate data that contains code
-        self.err_idx = []
-        self.err_idx2 = []
+        self.code_idx = []
+        self.fail_idx = []
         self.fail_translation_code : str="P1OP1_F"
 
     def reset(self):
-        self.data = None
-        self.translate_data = None
-        self.all_fields = None
-        self.target_fields = None
-        self.do_not_translate_code = False
-        self.err_idx = []
-        self.err_idx2 = []
+        self.code_idx = []
+        self.fail_idx = []
 
     def read(self, dataset_split):
         
         self.reset()
 
-        self.all_fields = dataset_split.column_names
+        all_fields = dataset_split.column_names
 
         data_converted = []
         qas_id = 0
         for data in tqdm(dataset_split, desc=f"Reading data"):
             data_dict = {}
 
-            for f in self.all_fields:
+            for f in all_fields:
                 data_dict[f] = data[f]
 
             data_dict["qas_id"] = qas_id
             qas_id += 1
             data_converted.append(data_dict)
 
-        self.data = data_converted
-
         print(f"Total data read: {len(self.data)}")
         print(f"Fields: {self.all_fields}")
+        return data_converted, all_fields
 
     def convert(self,
+        dataset_split,
         target_fields: List[str],
         source_lang: str = "en",
         target_lang: str = "te",
@@ -69,14 +57,14 @@ class TranslateModule:
         large_chunks_threshold = 20_000,
         max_list_length_per_thread = 3,):
 
-        self.target_fields = target_fields
-        self.do_not_translate_code = do_not_translate_code
+        data, all_fields = self.read(dataset_split)
+        target_fields = target_fields
 
-        self.pre_translate_validate()
+        data = self.pre_translate_validate(data, target_fields, do_not_translate_code)
 
         thread = TranslateThread(
-            all_fields = self.all_fields,
-            target_fields = self.target_fields,
+            all_fields = all_fields,
+            target_fields = target_fields,
             source_lang = source_lang,
             target_lang = target_lang,
             enable_sub_task_thread = enable_sub_task_thread,
@@ -84,49 +72,50 @@ class TranslateModule:
             large_chunks_threshold = large_chunks_threshold,
             max_list_length_per_thread = max_list_length_per_thread,
             translator = self.provider,)
-        thread.translate_converted(converted_data = self.data)
-        self.translate_data = thread.converted_data_translated
 
-        print(f"Total data translated: {len(self.translate_data)}")
+        thread.translate_converted(converted_data = data)
+        data = thread.converted_data_translated
 
-        self.post_translate_validate()
+        print(f"Total data translated: {len(data)}")
+
+        data = self.post_translate_validate()
+        return get_hf_data(data)
 
 
     @timeit
-    def pre_translate_validate(self) -> None:
+    def pre_translate_validate(self, data, target_fields, do_not_translate_code) -> None:
         validated_translate_data = []
-        code_datapoints = []
-        for idx, example in enumerate(tqdm(self.data, desc="Validating data for translation:")):
-            for key in self.target_fields:
-                if self.do_not_translate_code:
+        for idx, example in enumerate(tqdm(data, desc="Validating data for translation:")):
+            for key in target_fields:
+                if do_not_translate_code:
                     contain_code, score, found_elements = have_code(example[key])
                     if contain_code:
-                        code_datapoints.append(example["qas_id"])
+                        self.code_idx.append(example["qas_id"])
                         break
-                    elif key == self.target_fields[-1]:
+                    elif key == target_fields[-1]:
                         validated_translate_data.append(example)
                 else:
-                    if key == self.target_fields[-1]: validated_translate_data.append(example)
+                    if key == target_fields[-1]: validated_translate_data.append(example)
 
         print(f"\nTotal data left after filtering for translation: {len(validated_translate_data)}\n")
-        self.data = validated_translate_data
-        self.err_idx.extend(code_datapoints)
+        return validated_translate_data
 
     @timeit
-    def post_translate_validate(self) -> None:
+    def post_translate_validate(self, data, target_fields) -> None:
         post_validated_translate_data = []
         # Note: This validates will override the original self.converted_data_translated
-        for idx, example in enumerate(tqdm(self.translate_data, desc="Validating data after translation:")):
-            for key in self.target_fields:
+        for idx, example in enumerate(tqdm(data, desc="Validating data after translation:")):
+            for key in target_fields:
                 if have_re_code(example[key], code=self.fail_translation_code):
-                    self.err_idx2.append(example["qas_id"])
+                    self.fail_idx.append(example["qas_id"])
                     break
-                elif key == self.target_fields[-1]:
+                elif key == target_fields[-1]:
                     post_validated_translate_data.append(example)
 
         print(f"\nTotal data left after filtering fail translation: {len(post_validated_translate_data)}\n")
-        self.translate_data = post_validated_translate_data
+        return post_validated_translate_data
 
-    def get_hf_data(self):
-        return Dataset.from_list(self.translate_data)
+    def get_hf_data(self, data):
+        dataset = Dataset.from_list(data)
+        return dataset.sort("qas_id")
         
