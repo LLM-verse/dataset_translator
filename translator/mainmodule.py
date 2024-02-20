@@ -78,7 +78,7 @@ class TranslateModule:
 
         print(f"Total data translated: {len(data)}")
 
-        data = self.post_translate_validate()
+        data = self.post_translate_validate(data, target_fields)
         return get_hf_data(data)
 
 
