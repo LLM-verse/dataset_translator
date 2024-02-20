@@ -42,8 +42,8 @@ class TranslateModule:
             qas_id += 1
             data_converted.append(data_dict)
 
-        print(f"Total data read: {len(self.data)}")
-        print(f"Fields: {self.all_fields}")
+        print(f"Total data read: {len(data)}")
+        print(f"Fields: {all_fields}")
         return data_converted, all_fields
 
     def convert(self,
