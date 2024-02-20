@@ -32,6 +32,7 @@ class TranslateModule:
         self.translate_data = None
         self.all_fields = None
         self.target_fields = None
+        self.do_not_translated_code = False
         self.err_idx = []
         self.err_idx2 = []
 
@@ -63,11 +64,13 @@ class TranslateModule:
         source_lang: str = "en",
         target_lang: str = "te",
         enable_sub_task_thread: bool = True,
+        do_not_translated_code = False,
         max_example_per_thread = 400,
         large_chunks_threshold = 20_000,
         max_list_length_per_thread = 3,):
 
         self.target_fields = target_fields
+        self.do_not_translated_code = do_not_translated_code
 
         self.pre_translate_validate()
 
