@@ -22,13 +22,23 @@ class TranslateModule:
 
         self.all_fields = None
         self.target_fields = None
-        self.no_translated_code = False # If True, will not translate data that contains code
+        self.do_not_translated_code = False # If True, will not translate data that contains code
         self.err_idx = []
         self.err_idx2 = []
         self.fail_translation_code : str="P1OP1_F"
 
+    def reset(self):
+        self.data = None
+        self.translate_data = None
+        self.all_fields = None
+        self.target_fields = None
+        self.err_idx = []
+        self.err_idx2 = []
+
     def read(self, dataset_split):
         
+        self.reset()
+
         self.all_fields = dataset_split.column_names
 
         data_converted = []
@@ -52,9 +62,7 @@ class TranslateModule:
         target_fields: List[str],
         source_lang: str = "en",
         target_lang: str = "te",
-
         enable_sub_task_thread: bool = True,
-        no_translated_code: bool = False,
         max_example_per_thread = 400,
         large_chunks_threshold = 20_000,
         max_list_length_per_thread = 3,):
@@ -87,7 +95,7 @@ class TranslateModule:
         code_datapoints = []
         for idx, example in enumerate(tqdm(self.data, desc="Validating data for translation:")):
             for key in self.target_fields:
-                if self.no_translated_code:
+                if self.do_not_translated_code:
                     contain_code, score, found_elements = have_code(example[key])
                     if contain_code:
                         code_datapoints.append(example["qas_id"])
